@@ -72,6 +72,14 @@ body {
   cursor: pointer;
   margin-bottom: 1.75rem;
 }
+.workout-edit-input {
+  text-align: center;
+  padding: 0.2rem;
+  width: 6rem;
+  border-radius: 5px;
+  background-color: #7e7f80;
+  color: #fff;
+}
 .workout-running {
   border-left: solid 5px #00c46a;
 }

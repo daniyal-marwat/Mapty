@@ -100,13 +100,12 @@ class App {
         const btnEdit = e.target.closest(".icon__edit--workout");
         const btnDelete = e.target.closest(".icon__delete--workout");
         if (btnEdit) {
-          console.log(btnEdit.closest(".workout").dataset.id);
-          // this._editWorkout(btnEdit.closest(".workout").dataset.id);
+          const workoutID = btnEdit.closest(".workout").dataset.id;
+          this._editWorkout(workoutID);
         }
         if (btnDelete) {
-          const workout = btnDelete.closest(".workout").dataset.id;
-          this._deleteWorkout(workout);
-          // console.log(btnDelete.closest(".workout").dataset.id);
+          const workoutID = btnDelete.closest(".workout").dataset.id;
+          this._deleteWorkout(workoutID);
         }
       }.bind(this)
     );
@@ -161,14 +160,18 @@ class App {
     inputElevation.closest(".form__row").classList.toggle("form__row--hidden");
     inputCadence.closest(".form__row").classList.toggle("form__row--hidden");
   }
+  _checkValidInputs(...inputs) {
+    return inputs.every((inp) => Number.isFinite(inp) && inp > 0);
+  }
 
   _newWorkout(e) {
     e.preventDefault();
 
     //Helper functions
-    const isValidInput = (...inputs) =>
-      inputs.every((inp) => Number.isFinite(inp));
-    const isPositiveNum = (...inputs) => inputs.every((inp) => inp > 0);
+    // No need
+    // const isValidInput = (...inputs) =>
+    //   inputs.every((inp) => Number.isFinite(inp));
+    // const isPositiveNum = (...inputs) => inputs.every((inp) => inp > 0);
 
     // Get the data from form
     const type = inputType.value;
@@ -180,10 +183,7 @@ class App {
     // if workout running take cadence and check for valid number
     if (type === "running") {
       const cadence = +inputCadence.value;
-      if (
-        !isValidInput(distance, duration, cadence) ||
-        !isPositiveNum(distance, duration, cadence)
-      ) {
+      if (!this._checkValidInputs(distance, duration, cadence)) {
         return alert("Input must be postive number");
       }
       workout = new Running([lat, lng], distance, duration, cadence);
@@ -192,10 +192,7 @@ class App {
     // if workout cycling take elevation and check for valid number
     if (type === "cycling") {
       const elevation = +inputElevation.value;
-      if (
-        !isValidInput(distance, duration, elevation) ||
-        !isPositiveNum(distance, duration)
-      ) {
+      if (!this._checkValidInputs(distance, duration, elevation)) {
         return alert("Input must be postive number");
       }
       workout = new Cycling([lat, lng], distance, duration, elevation);
@@ -234,6 +231,118 @@ class App {
     const [marker] = this.#markers.splice(markerIndex, 1);
     marker.remove();
     this._storeWorkouts();
+  }
+  // Edit workout
+  _editWorkout(workoutID) {
+    const workout = this.#workouts.find((work) => work.id === workoutID);
+    // workout.distance = inputDistance.value;
+    const li = document.querySelector(`[data-id="${workoutID}"]`);
+    let html;
+    html = `<li class="workout workout-${
+      workout.type
+    } data workout-edit" data-id="${workout.id}">
+              <div class="workout__icon-container">
+            <box-icon
+              class="icon__edit--workout"
+              type="solid"
+              name="edit"
+              color="#fff"
+            ></box-icon>
+            <box-icon
+              class="icon__delete--workout"
+              name="message-square-x"
+              color="#ffffff"
+            ></box-icon>
+          </div>
+          <h2 class="workout__title">${workout.description}</h2>
+          <div class="workout__details--container">
+            <div class="workout__details">
+              <span class="workout__icon">${
+                workout.type === "running" ? "🏃‍♂️" : "🚴‍♂️"
+              }</span>
+              <input type="number" class="workout-edit-input workout-edit-input__distance" />
+              <span class="workout__unit">km</span>
+            </div>
+            <div class="workout__details">
+              <span class="workout__icon">⏱</span>
+              <input type="number" class="workout-edit-input workout-edit-input__duration" />
+              <span class="workout__unit">min</span>
+            </div>`;
+    if (workout.type === "running") {
+      html += `            
+            <div class="workout__details">
+              <span class="workout__icon">🦶</span>
+              <input type="number" class="workout-edit-input workout-edit-input__cadence" />
+              <span class="workout__unit">spm</span>
+            </div>
+          </div>
+        </li>`;
+    }
+    if (workout.type === "cycling") {
+      html += `           
+            <div class="workout__details">
+              <span class="workout__icon">⛰ </span>
+              <input type="number" class="workout-edit-input workout-edit-input__elevation" />
+              <span class="workout__unit">m</span>
+            </div>
+          </div>
+        </li>`;
+    }
+    // Insert the new HTML after the old <li>
+    li.insertAdjacentHTML("afterend", html);
+    // Remove the old <li>
+    li.parentNode.removeChild(li);
+    document.querySelector(".workout-edit-input__distance").focus();
+    const workoutEdit = document.querySelector(".workout-edit");
+    workoutEdit.addEventListener(
+      "keydown",
+      function (e) {
+        if (e.key !== "Enter") return;
+
+        workout.distance = +document.querySelector(
+          ".workout-edit-input__distance"
+        ).value;
+        workout.duration = +document.querySelector(
+          ".workout-edit-input__duration"
+        ).value;
+        if (workout.type === "running") {
+          workout.cadence = +document.querySelector(
+            ".workout-edit-input__cadence"
+          ).value;
+          if (
+            !this._checkValidInputs(
+              workout.distance,
+              workout.duration,
+              workout.cadence
+            )
+          ) {
+            return alert("Input must be postive number");
+          }
+          workout.pace = workout.duration / workout.distance;
+        }
+        if (workout.type === "cycling") {
+          workout.elevationGain = +document.querySelector(
+            ".workout-edit-input__elevation"
+          ).value;
+          if (
+            !this._checkValidInputs(
+              workout.distance,
+              workout.duration,
+              workout.elevationGain
+            )
+          ) {
+            return alert("Input must be postive number");
+          }
+          workout.speed = workout.distance / (workout.duration / 60);
+        }
+        // remove the editable code from html
+        document.querySelector(".workout-edit").remove();
+
+        // render new workout
+        this._renderWorkoutOnList(workout);
+        this._storeWorkouts();
+      }.bind(this)
+    );
   }
 
   // Not perfect one commenting it
