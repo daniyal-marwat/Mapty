@@ -216,6 +216,7 @@ class App {
     //store workout
     this._storeWorkouts();
   }
+  // delete workout when click on X icon
   _deleteWorkout(workoutID) {
     const workoutCoords = this.#workouts.find(
       (workout) => workout.id === workoutID
