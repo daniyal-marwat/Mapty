@@ -82,23 +82,30 @@ class App {
   #workouts = [];
   #markers = [];
   #mapZoomLevel = 13;
-  boundNewWorkout = this._newWorkout.bind(this);
-
   constructor() {
     // get position
     this._getPosition();
     // evenet listners
-    form.addEventListener("submit", this.boundNewWorkout);
+    form.addEventListener("submit", this._newWorkout.bind(this));
     inputType.addEventListener("change", this._toggleElevationField);
-    containerWorkouts.addEventListener("click", this._moveToPopup.bind(this));
+
+    // done in below listener
+    // containerWorkouts.addEventListener("click", this._moveToPopup.bind(this));
+
     //get workouts
     this._getWorkouts();
-    // Edit or delete workout
+    this._renderDeleteAllIcon();
+    //container listeners + Edit or delete workout
     containerWorkouts.addEventListener(
       "click",
       function (e) {
+        this._moveToPopup(e);
         const btnEdit = e.target.closest(".icon__edit--workout");
         const btnDelete = e.target.closest(".icon__delete--workout");
+        const btnDeleteAll = e.target.closest(".delete-all-icon--container");
+        if (btnDeleteAll) {
+          this._deleteAllWorkout();
+        }
         if (btnEdit) {
           const workoutID = btnEdit.closest(".workout").dataset.id;
           this._editWorkout(workoutID);
@@ -140,7 +147,10 @@ class App {
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove("hidden");
-    inputDistance.focus();
+    // It focus the input field after time.. it gives time to load form and then focus
+    setTimeout(() => {
+      inputDistance.focus();
+    }, 100);
   }
 
   _hideForm() {
@@ -212,6 +222,7 @@ class App {
 
     //store workout
     this._storeWorkouts();
+    this._renderDeleteAllIcon();
   }
   // delete workout when click on X icon
   _deleteWorkout(workoutID) {
@@ -231,6 +242,17 @@ class App {
     const [marker] = this.#markers.splice(markerIndex, 1);
     marker.remove();
     this._storeWorkouts();
+    this._renderDeleteAllIcon();
+  }
+  //Delete all workouts
+  _deleteAllWorkout() {
+    this.#workouts = [];
+    const workouts = containerWorkouts.querySelectorAll(".workout");
+    this.#markers.forEach((mark) => mark.remove());
+    this.#markers = [];
+    workouts.forEach((work) => work.remove());
+    this._storeWorkouts();
+    this._renderDeleteAllIcon();
   }
   // Edit workout
   _editWorkout(workoutID) {
@@ -509,6 +531,7 @@ class App {
   _storeWorkouts() {
     localStorage.setItem("workouts", JSON.stringify(this.#workouts));
   }
+  // get workout and also render delete all icon
   _getWorkouts() {
     const data = JSON.parse(localStorage.getItem("workouts"));
     if (!data) return;
@@ -516,6 +539,14 @@ class App {
     this.#workouts.forEach((work) => {
       this._renderWorkoutOnList(work);
     });
+  }
+  _renderDeleteAllIcon() {
+    const btnDeleteAll = document.querySelector(".delete-all-icon--container");
+    if (this.#workouts.length !== 0) {
+      btnDeleteAll.classList.remove("hidden");
+    } else {
+      btnDeleteAll.classList.add("hidden");
+    }
   }
   reset() {
     //clear whole local storage

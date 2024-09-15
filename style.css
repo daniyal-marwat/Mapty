@@ -58,7 +58,19 @@ body {
 .form__btn {
   display: none;
 }
+.ul-icon-container {
+  cursor: pointer;
+  transition: fill 0.2s;
+  fill: #fff;
+  position: absolute;
+  right: 0;
+  top: 1%;
+  &:hover {
+    fill: red;
+  }
+}
 .workouts {
+  position: relative;
   padding: 5rem 0 5rem 0;
   list-style: none;
   overflow-y: auto;
@@ -138,6 +150,11 @@ body {
   width: 100%;
 }
 /* General */
+.hidden {
+  /* display: none; */
+  visibility: hidden;
+  opacity: 0;
+}
 .form__row--hidden {
   display: none;
 }
