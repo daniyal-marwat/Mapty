@@ -256,10 +256,9 @@ class App {
   }
   // Edit workout
   _editWorkout(workoutID) {
-    const workout = this.#workouts.find((work) => work.id === workoutID);
-    // workout.distance = inputDistance.value;
-    const li = document.querySelector(`[data-id="${workoutID}"]`);
     let html;
+    const workout = this.#workouts.find((work) => work.id === workoutID);
+    const li = document.querySelector(`[data-id="${workoutID}"]`);
     html = `<li class="workout workout-${
       workout.type
     } data workout-edit" data-id="${workout.id}">
@@ -304,7 +303,7 @@ class App {
       html += `           
             <div class="workout__details">
               <span class="workout__icon">⛰ </span>
-              <input type="number" class="workout-edit-input workout-edit-input__elevation" />
+              <input type="number" class="workout-edit-input workout-edit-input__elevationGain" />
               <span class="workout__unit">m</span>
             </div>
           </div>
@@ -312,6 +311,18 @@ class App {
     }
     // Insert the new HTML after the old <li>
     li.insertAdjacentHTML("afterend", html);
+    // selecting edit html elements and setting it to the previous values
+    const arrField = [
+      "distance",
+      "duration",
+      workout.type === "running" ? "cadence" : "elevationGain",
+    ];
+    arrField.forEach((field) => {
+      const inputField = document.querySelector(
+        `.workout-edit-input__${field}`
+      );
+      inputField.value = workout[field];
+    });
     // Remove the old <li>
     li.parentNode.removeChild(li);
     document.querySelector(".workout-edit-input__distance").focus();
@@ -340,11 +351,12 @@ class App {
           ) {
             return alert("Input must be postive number");
           }
-          workout.pace = workout.duration / workout.distance;
+          workout.calcPace();
+          // workout.pace = workout.duration / workout.distance;
         }
         if (workout.type === "cycling") {
           workout.elevationGain = +document.querySelector(
-            ".workout-edit-input__elevation"
+            ".workout-edit-input__elevationGain"
           ).value;
           if (
             !this._checkValidInputs(
@@ -355,7 +367,8 @@ class App {
           ) {
             return alert("Input must be postive number");
           }
-          workout.speed = workout.distance / (workout.duration / 60);
+          workout.calcSpeed();
+          // workout.speed = workout.distance / (workout.duration / 60);
         }
         // remove the editable code from html
         document.querySelector(".workout-edit").remove();
@@ -465,7 +478,7 @@ class App {
       html += `            <div class="workout__details">
               <span class="workout__icon">⚡️</span>
               <span class="workout__value">${workout.speed.toFixed(1)}</span>
-              <span class="workout__unit">min/km</span>
+              <span class="workout__unit">km/h</span>
             </div>
             <div class="workout__details">
               <span class="workout__icon">⛰ </span>
@@ -531,22 +544,44 @@ class App {
   _storeWorkouts() {
     localStorage.setItem("workouts", JSON.stringify(this.#workouts));
   }
+  // sort workout array by distance
+  _sortWorkouts() {
+    this.#workouts.sort((a, b) => a.distance - b.distance);
+  }
   // get workout and also render delete all icon
   _getWorkouts() {
     const data = JSON.parse(localStorage.getItem("workouts"));
+
     if (!data) return;
-    this.#workouts = data;
+    data.forEach((work) => {
+      if (work.type === "running") {
+        const workout = new Running(
+          work.coords,
+          work.distance,
+          work.duration,
+          work.cadence
+        );
+        this.#workouts.push(workout);
+      } else {
+        const workout = new Cycling(
+          work.coords,
+          work.distance,
+          work.duration,
+          work.elevationGain
+        );
+        this.#workouts.push(workout);
+      }
+    });
+    console.log(data);
+    console.log(this.#workouts);
+    this._sortWorkouts();
     this.#workouts.forEach((work) => {
       this._renderWorkoutOnList(work);
     });
   }
   _renderDeleteAllIcon() {
-    const btnDeleteAll = document.querySelector(".delete-all-icon--container");
-    if (this.#workouts.length !== 0) {
-      btnDeleteAll.classList.remove("hidden");
-    } else {
-      btnDeleteAll.classList.add("hidden");
-    }
+    const deleteAllBtn = document.querySelector(".delete-all-icon--container");
+    deleteAllBtn.classList.toggle("hidden", this.#workouts.length === 0);
   }
   reset() {
     //clear whole local storage
