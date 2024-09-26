@@ -17,7 +17,14 @@ const months = [
 
 class Workout {
   date = new Date();
-  id = Date.now().toString().slice(-10);
+  // Ids were same when recreate workout form localstorage as time is same so there were errors
+  // id = Date.now().toString().slice(-10);
+
+  // This id is better
+  id =
+    Date.now().toString().slice(-10) +
+    Math.floor(Math.random() * 1000).toString();
+
   clicks = 0;
   constructor(coords, distance, duration) {
     this.coords = coords; //[lat,lon]
@@ -142,9 +149,13 @@ class App {
     this.#workouts.forEach((workout) => {
       this._renderWorkoutMarker(workout);
     });
+    if (this.#workouts.length > 1) {
+      this._setMapToShowAllWorkout();
+    }
   }
 
   _showForm(mapE) {
+    console.log(mapE);
     this.#mapEvent = mapE;
     form.classList.remove("hidden");
     // It focus the input field after time.. it gives time to load form and then focus
@@ -417,8 +428,8 @@ class App {
         L.popup({
           maxWidth: 250,
           minWidth: 100,
-          autoClose: true,
-          closeOnClick: false,
+          autoClose: false,
+          closeOnClick: true,
           className: `${workout.type}-popup`,
         })
       )
@@ -572,12 +583,31 @@ class App {
         this.#workouts.push(workout);
       }
     });
-    console.log(data);
-    console.log(this.#workouts);
     this._sortWorkouts();
     this.#workouts.forEach((work) => {
       this._renderWorkoutOnList(work);
     });
+  }
+
+  _calcAverageCoords() {
+    if (this.#workouts.length === 0) return;
+
+    let totalLat = 0;
+    let totallng = 0;
+    this.#workouts.forEach((work) => {
+      totalLat += work.coords[0];
+      totallng += work.coords[1];
+    });
+    totalLat /= this.#workouts.length;
+    totallng /= this.#workouts.length;
+    return [totalLat, totallng];
+  }
+  _setMapToShowAllWorkout() {
+    const bounds = L.latLngBounds();
+    this.#workouts.forEach((work) => {
+      bounds.extend(work.coords);
+    });
+    this.#map.fitBounds(bounds);
   }
   _renderDeleteAllIcon() {
     const deleteAllBtn = document.querySelector(".delete-all-icon--container");
