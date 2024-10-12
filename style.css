@@ -132,6 +132,27 @@ body {
 }
 .map {
   background-color: #aaa;
+  position: relative;
+}
+.map__edit-butttons-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 1rem 0 0;
+}
+.map__edit-butttons-container button {
+  border: none;
+  padding: 0.5rem 1rem 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.61);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: fill 0.4s;
+}
+.map__edit-butttons-container button:hover {
+  fill: red;
 }
 .copyright {
   font-size: 1.3rem;
@@ -154,6 +175,9 @@ body {
   /* display: none; */
   visibility: hidden;
   opacity: 0;
+}
+.hide--sidebar {
+  display: none;
 }
 .form__row--hidden {
   display: none;

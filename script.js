@@ -73,9 +73,8 @@ const cycle1 = new Cycling([90, 102], 10, 120, 120);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // APPLICATION
-
+const map = document.querySelector("#map");
 const form = document.querySelector(".form");
-// const containerWorkout = document.querySelector()
 const containerWorkouts = document.querySelector(".workouts");
 const inputType = document.querySelector(".form__input--type");
 const inputDistance = document.querySelector(".form__input--distance");
@@ -88,7 +87,10 @@ class App {
   #mapEvent;
   #workouts = [];
   #markers = [];
+  #editModeLines = [];
   #mapZoomLevel = 13;
+  #isEditMode = false;
+  #latlngEditMode = [];
   constructor() {
     // get position
     this._getPosition();
@@ -123,6 +125,7 @@ class App {
         }
       }.bind(this)
     );
+    this._EditMode();
   }
 
   _getPosition() {
@@ -146,6 +149,7 @@ class App {
     }).addTo(this.#map);
 
     this.#map.on("click", this._showForm.bind(this));
+
     this.#workouts.forEach((workout) => {
       this._renderWorkoutMarker(workout);
     });
@@ -155,7 +159,6 @@ class App {
   }
 
   _showForm(mapE) {
-    console.log(mapE);
     this.#mapEvent = mapE;
     form.classList.remove("hidden");
     // It focus the input field after time.. it gives time to load form and then focus
@@ -589,25 +592,28 @@ class App {
     });
   }
 
-  _calcAverageCoords() {
-    if (this.#workouts.length === 0) return;
-
-    let totalLat = 0;
-    let totallng = 0;
-    this.#workouts.forEach((work) => {
-      totalLat += work.coords[0];
-      totallng += work.coords[1];
-    });
-    totalLat /= this.#workouts.length;
-    totallng /= this.#workouts.length;
-    return [totalLat, totallng];
-  }
   _setMapToShowAllWorkout() {
     const bounds = L.latLngBounds();
     this.#workouts.forEach((work) => {
       bounds.extend(work.coords);
     });
     this.#map.fitBounds(bounds);
+  }
+  _drawShapes() {
+    this.#map.on(
+      "click",
+      function (e) {
+        if (!this.#isEditMode) {
+          this.#latlngEditMode = [];
+          return;
+        }
+        const { lat, lng } = e.latlng;
+        this.#latlngEditMode.push([lat, lng]);
+        const layer = L.polyline(this.#latlngEditMode).addTo(this.#map);
+        this.#editModeLines.push(layer);
+        layer.addTo(this.#map);
+      }.bind(this)
+    );
   }
   _renderDeleteAllIcon() {
     const deleteAllBtn = document.querySelector(".delete-all-icon--container");
@@ -623,6 +629,59 @@ class App {
     // reload page
     location.reload();
   }
+
+  _EditMode() {
+    let timeout;
+    const exit = document.querySelector(".map__edit-butttons-exit");
+    const deleteAll = document.querySelector(".map__edit-butttons-deleteAll");
+    // const undo = document.querySelector(".map__edit-butttons-undo");
+    map.addEventListener(
+      "mousedown",
+      function () {
+        timeout = setTimeout(this._enterEditMode.bind(this), 1500);
+      }.bind(this)
+    );
+    map.addEventListener("mouseup", function () {
+      clearTimeout(timeout);
+    });
+    map.addEventListener("mouseleave", function () {
+      clearTimeout(timeout);
+    });
+    deleteAll.addEventListener("click", this._deleteLines.bind(this));
+    // undo.addEventListener("click", this._undoLine.bind(this));
+    exit.addEventListener("click", this._exitEditMode.bind(this));
+  }
+  _enterEditMode() {
+    this.#isEditMode = true;
+    this._drawShapes();
+    document.querySelector(".sidebar").classList.add("hide--sidebar");
+    document
+      .querySelector(".map__edit-butttons-container")
+      .classList.remove("hidden");
+  }
+  _exitEditMode() {
+    this.#isEditMode = false;
+    document.querySelector(".sidebar").classList.remove("hide--sidebar");
+    document
+      .querySelector(".map__edit-butttons-container")
+      .classList.add("hidden");
+    this.#editModeLines.forEach((line) => line.remove());
+  }
+  _deleteLines() {
+    this.#isEditMode = false;
+    this.#editModeLines.forEach((line) => line.remove());
+    this.#editModeLines = [];
+    setTimeout(() => {
+      this.#isEditMode = true;
+    }, 100);
+  }
+  // _undoLine() {
+  //   this.#latlngEditMode.pop();
+  //   const lastEl = this.#editModeLines.pop();
+  //   lastEl.remove();
+  //   // this.#latlngEditMode.pop();
+  //   // this.#latlngEditMode.pop();
+  // }
 }
 
 const app = new App();
