@@ -26,15 +26,33 @@ class Workout {
     Math.floor(Math.random() * 1000).toString();
 
   clicks = 0;
-  constructor(coords, distance, duration) {
+  constructor(coords, distance, duration, description = null) {
     this.coords = coords; //[lat,lon]
     this.distance = distance; // km
     this.duration = duration; // min
+    this.description = description;
+  }
+  async initialize() {
+    if (this.description) return;
+
+    await this._reverseGeoCode();
+    this._setDescription();
+  }
+  async _reverseGeoCode() {
+    try {
+      const req = await fetch(
+        `https://us1.locationiq.com/v1/reverse?key=pk.c7f089e923bf029b4ee25317ea970fa6&lat=${this.coords[0]}&lon=${this.coords[1]}&format=json&`
+      );
+      const data = await req.json();
+      this.location = data.display_name.split(",").splice(0, 2).join(" ");
+    } catch (error) {
+      console.error(error);
+    }
   }
   _setDescription() {
-    this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
-      months[this.date.getMonth()]
-    } ${this.date.getDate()}`;
+    this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} in ${
+      this.location
+    } on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
   }
   click() {
     this.clicks++;
@@ -43,11 +61,11 @@ class Workout {
 
 class Running extends Workout {
   type = "running";
-  constructor(coords, distance, duration, cadence) {
-    super(coords, distance, duration);
+  constructor(coords, distance, duration, cadence, description) {
+    super(coords, distance, duration, description);
     this.cadence = cadence;
     this.calcPace();
-    this._setDescription();
+    // this._setDescription();
   }
   calcPace() {
     // min/km
@@ -57,19 +75,19 @@ class Running extends Workout {
 
 class Cycling extends Workout {
   type = "cycling";
-  constructor(coords, distance, duration, elevationGain) {
-    super(coords, distance, duration);
+  constructor(coords, distance, duration, elevationGain, description) {
+    super(coords, distance, duration, description);
     this.elevationGain = elevationGain;
     this.calcSpeed();
-    this._setDescription();
+    // this._setDescription();
   }
   calcSpeed() {
     // km/h
     this.speed = this.distance / (this.duration / 60);
   }
 }
-const run1 = new Running([120, -19], 12, 90, 20);
-const cycle1 = new Cycling([90, 102], 10, 120, 120);
+// const run1 = new Running([120, -19], 12, 90, 20);
+// const cycle1 = new Cycling([90, 102], 10, 120, 120);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // APPLICATION
@@ -188,7 +206,7 @@ class App {
     return inputs.every((inp) => Number.isFinite(inp) && inp > 0);
   }
 
-  _newWorkout(e) {
+  async _newWorkout(e) {
     e.preventDefault();
 
     //Helper functions
@@ -211,6 +229,7 @@ class App {
         return alert("Input must be postive number");
       }
       workout = new Running([lat, lng], distance, duration, cadence);
+      await workout.initialize();
     }
 
     // if workout cycling take elevation and check for valid number
@@ -220,6 +239,7 @@ class App {
         return alert("Input must be postive number");
       }
       workout = new Cycling([lat, lng], distance, duration, elevation);
+      await workout.initialize();
     }
 
     // add new object to workout array
@@ -442,7 +462,8 @@ class App {
       .openPopup();
     this.#markers.push(marker);
   }
-  _renderWorkoutOnList(workout) {
+  async _renderWorkoutOnList(workout) {
+    // console.log(await workout.description);
     let html;
     html = `<li class="workout workout-${workout.type} data" data-id="${
       workout.id
@@ -573,7 +594,8 @@ class App {
           work.coords,
           work.distance,
           work.duration,
-          work.cadence
+          work.cadence,
+          work.description
         );
         this.#workouts.push(workout);
       } else {
@@ -581,12 +603,14 @@ class App {
           work.coords,
           work.distance,
           work.duration,
-          work.elevationGain
+          work.elevationGain,
+          work.description
         );
         this.#workouts.push(workout);
       }
     });
     this._sortWorkouts();
+    // this._reverseGeoCode();
     this.#workouts.forEach((work) => {
       this._renderWorkoutOnList(work);
     });
@@ -681,6 +705,16 @@ class App {
   //   lastEl.remove();
   //   // this.#latlngEditMode.pop();
   //   // this.#latlngEditMode.pop();
+  // }
+  // async _reverseGeoCode() {
+  //   if (this.#workouts.length < 1) return;
+  //   const req = await fetch(
+  //     `https://us1.locationiq.com/v1/reverse?key=pk.c7f089e923bf029b4ee25317ea970fa6&lat=${
+  //       this.#workouts[this.#workouts.length - 1].coords[0]
+  //     }&lon=${this.#workouts[this.#workouts.length - 1].coords[1]}&format=json&`
+  //   );
+  //   const data = await req.json();
+  //   console.log(data);
   // }
 }
 
