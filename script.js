@@ -26,15 +26,19 @@ class Workout {
     Math.floor(Math.random() * 1000).toString();
 
   clicks = 0;
-  constructor(coords, distance, duration, description = null) {
+  constructor(coords, distance, duration, description = null, weather = null) {
     this.coords = coords; //[lat,lon]
     this.distance = distance; // km
     this.duration = duration; // min
     this.description = description;
+    this.weather = weather;
   }
   async initialize() {
+    if (!this.weather) {
+      await this._getWeatherInfo();
+      console.log("weather done");
+    }
     if (this.description) return;
-
     await this._reverseGeoCode();
     this._setDescription();
   }
@@ -49,10 +53,23 @@ class Workout {
       console.error(error);
     }
   }
+  async _getWeatherInfo() {
+    try {
+      const req = await fetch(
+        `https://api.weatherapi.com/v1/current.json?key=f260da5eeb524e348dd134911241310&q=${this.coords[0]},${this.coords[1]}`
+      );
+      const data = await req.json();
+      this.weather = [data.current.temp_c, data.current.condition.icon];
+      // this.temp = data.current.temp_c;
+      // this.condition = data.current.condition.icon;
+    } catch (error) {
+      console.error(error);
+    }
+  }
   _setDescription() {
     this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} in ${
       this.location
-    } on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
+    } on ${months[this.date.getMonth()].slice(0, 3)} ${this.date.getDate()}`;
   }
   click() {
     this.clicks++;
@@ -61,8 +78,8 @@ class Workout {
 
 class Running extends Workout {
   type = "running";
-  constructor(coords, distance, duration, cadence, description) {
-    super(coords, distance, duration, description);
+  constructor(coords, distance, duration, cadence, description, weather) {
+    super(coords, distance, duration, description, weather);
     this.cadence = cadence;
     this.calcPace();
     // this._setDescription();
@@ -75,8 +92,8 @@ class Running extends Workout {
 
 class Cycling extends Workout {
   type = "cycling";
-  constructor(coords, distance, duration, elevationGain, description) {
-    super(coords, distance, duration, description);
+  constructor(coords, distance, duration, elevationGain, description, weather) {
+    super(coords, distance, duration, description, weather);
     this.elevationGain = elevationGain;
     this.calcSpeed();
     // this._setDescription();
@@ -110,6 +127,7 @@ class App {
   #isEditMode = false;
   #latlngEditMode = [];
   constructor() {
+    // this.reset();
     // get position
     this._getPosition();
     // evenet listners
@@ -462,8 +480,7 @@ class App {
       .openPopup();
     this.#markers.push(marker);
   }
-  async _renderWorkoutOnList(workout) {
-    // console.log(await workout.description);
+  _renderWorkoutOnList(workout) {
     let html;
     html = `<li class="workout workout-${workout.type} data" data-id="${
       workout.id
@@ -505,9 +522,7 @@ class App {
               <span class="workout__icon">🦶</span>
               <span class="workout__value">${workout.cadence}</span>
               <span class="workout__unit">spm</span>
-            </div>
-          </div>
-        </li>`;
+            </div>`;
     }
     if (workout.type === "cycling") {
       html += `            <div class="workout__details">
@@ -519,10 +534,20 @@ class App {
               <span class="workout__icon">⛰ </span>
               <span class="workout__value">${workout.elevationGain}</span>
               <span class="workout__unit">m</span>
-            </div>
-          </div>
-        </li>`;
+            </div>`;
     }
+    html += `            <div class="workout__details">
+              <span class="workout__icon workout__whether__icon"
+                ><img
+                  src="${workout.weather[1]}"
+                  alt="Weather condition"
+                />
+              </span>
+              <span class="workout__value">${workout.weather[0]}</span>
+              <span class="workout__unit">°C</span>
+            </div>
+            </div>
+            </li>`;
     form.insertAdjacentHTML("afterend", html);
   }
 
@@ -589,28 +614,29 @@ class App {
 
     if (!data) return;
     data.forEach((work) => {
+      let workout;
       if (work.type === "running") {
-        const workout = new Running(
+        workout = new Running(
           work.coords,
           work.distance,
           work.duration,
           work.cadence,
-          work.description
+          work.description,
+          work.weather
         );
-        this.#workouts.push(workout);
       } else {
-        const workout = new Cycling(
+        workout = new Cycling(
           work.coords,
           work.distance,
           work.duration,
           work.elevationGain,
-          work.description
+          work.description,
+          work.weather
         );
-        this.#workouts.push(workout);
       }
+      this.#workouts.push(workout);
     });
     this._sortWorkouts();
-    // this._reverseGeoCode();
     this.#workouts.forEach((work) => {
       this._renderWorkoutOnList(work);
     });
@@ -653,7 +679,6 @@ class App {
     // reload page
     location.reload();
   }
-
   _EditMode() {
     let timeout;
     const exit = document.querySelector(".map__edit-butttons-exit");

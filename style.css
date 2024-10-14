@@ -99,12 +99,12 @@ body {
   border-left: solid 5px #ffb545;
 }
 .workout__title {
-  font-size: 1.7rem;
+  font-size: 1.6rem;
   font-weight: 600;
 }
 .workout__details--container {
   display: flex;
-  gap: 2rem;
+  gap: 1rem;
 }
 .workout__details {
   display: flex;
@@ -129,6 +129,12 @@ body {
   gap: 0.5rem;
   top: 5%;
   right: 2%;
+}
+.workout__whether__icon {
+  display: flex;
+}
+.workout__whether__icon img {
+  height: 4rem;
 }
 .map {
   background-color: #aaa;
