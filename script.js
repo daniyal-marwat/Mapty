@@ -34,13 +34,13 @@ class Workout {
     this.weather = weather;
   }
   async initialize() {
-    if (!this.weather) {
-      await this._getWeatherInfo();
-      console.log("weather done");
-    }
-    if (this.description) return;
+    const icon =
+      "<box-icon name='color' type='solid' animation='spin' rotate='90' color='#ffffff' ></box-icon>";
+    this._handleMessage(icon);
+    await this._getWeatherInfo();
     await this._reverseGeoCode();
     this._setDescription();
+    this._removeMessage();
   }
   async _reverseGeoCode() {
     try {
@@ -50,6 +50,7 @@ class Workout {
       const data = await req.json();
       this.location = data.display_name.split(",").splice(0, 2).join(" ");
     } catch (error) {
+      this._handleMessage(error.message);
       console.error(error);
     }
   }
@@ -63,6 +64,7 @@ class Workout {
       // this.temp = data.current.temp_c;
       // this.condition = data.current.condition.icon;
     } catch (error) {
+      this._handleMessage(error.message);
       console.error(error);
     }
   }
@@ -73,6 +75,32 @@ class Workout {
   }
   click() {
     this.clicks++;
+  }
+  _handleMessage(message) {
+    if (this.messageContainer) {
+      this.messageContainer.remove();
+    }
+    const body = document.querySelector("body");
+    // <p class="error-message">${message}</p>
+    const html = `    <div class="error-message__container">
+    ${message}
+      <box-icon class="error-hide-btn error-icon" name="x"></box-icon>
+    </div>`;
+    body.insertAdjacentHTML("beforeend", html);
+    const closeMessage = document.querySelector(".error-hide-btn");
+    this.messageContainer = document.querySelector(".error-message__container");
+    closeMessage.addEventListener(
+      "click",
+      function () {
+        this.messageContainer.remove();
+      }.bind(this)
+    );
+    setTimeout(() => {
+      this.messageContainer.remove();
+    }, 3000);
+  }
+  _removeMessage() {
+    this.messageContainer.remove();
   }
 }
 
@@ -127,7 +155,6 @@ class App {
   #isEditMode = false;
   #latlngEditMode = [];
   constructor() {
-    // this.reset();
     // get position
     this._getPosition();
     // evenet listners
@@ -168,8 +195,8 @@ class App {
     navigator.geolocation.getCurrentPosition(
       this._loadMap.bind(this),
       function (error) {
-        console.log(error.message);
-      }
+        this._handleMessage(error.message);
+      }.bind(this)
     );
   }
 
@@ -196,6 +223,13 @@ class App {
 
   _showForm(mapE) {
     this.#mapEvent = mapE;
+    const closeForm = document.querySelector(".form_x_icon");
+    closeForm.addEventListener(
+      "click",
+      function () {
+        form.classList.add("hidden");
+      }.bind(this)
+    );
     form.classList.remove("hidden");
     // It focus the input field after time.. it gives time to load form and then focus
     setTimeout(() => {
@@ -244,7 +278,7 @@ class App {
     if (type === "running") {
       const cadence = +inputCadence.value;
       if (!this._checkValidInputs(distance, duration, cadence)) {
-        return alert("Input must be postive number");
+        return this._handleMessage("Input must be postive number");
       }
       workout = new Running([lat, lng], distance, duration, cadence);
       await workout.initialize();
@@ -254,7 +288,7 @@ class App {
     if (type === "cycling") {
       const elevation = +inputElevation.value;
       if (!this._checkValidInputs(distance, duration, elevation)) {
-        return alert("Input must be postive number");
+        return this._handleMessage("Input must be postive number");
       }
       workout = new Cycling([lat, lng], distance, duration, elevation);
       await workout.initialize();
@@ -741,6 +775,28 @@ class App {
   //   const data = await req.json();
   //   console.log(data);
   // }
+  _handleMessage(message) {
+    if (this.messageContainer) {
+      this.messageContainer.remove();
+    }
+    const body = document.querySelector("body");
+    const html = `    <div class="error-message__container">
+    ${message}
+      <box-icon class="error-hide-btn error-icon" name="x"></box-icon>
+    </div>`;
+    body.insertAdjacentHTML("beforeend", html);
+    const closeMessage = document.querySelector(".error-hide-btn");
+    this.messageContainer = document.querySelector(".error-message__container");
+    closeMessage.addEventListener(
+      "click",
+      function () {
+        this.messageContainer.remove();
+      }.bind(this)
+    );
+    setTimeout(() => {
+      this.messageContainer.remove();
+    }, 3000);
+  }
 }
 
 const app = new App();
